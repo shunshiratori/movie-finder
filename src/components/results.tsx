@@ -1,17 +1,17 @@
 import { Movie } from "../App";
 
-interface ResultsProps {
+type ResultsProps = {
   searchResult: Movie | undefined;
-}
+  errorMessage: string;
+};
 
-export const Results: React.FC<ResultsProps> = ({ searchResult }) => {
+export const Results: React.FC<ResultsProps> = ({
+  searchResult,
+  errorMessage,
+}) => {
   if (!searchResult) return;
   if (searchResult.total_results === 0) {
-    return (
-      <h2 style={{ textAlign: "center" }}>
-        {"一致する映画はありませんでした"}
-      </h2>
-    );
+    return <h2 style={{ textAlign: "center" }}>{errorMessage}</h2>;
   }
 
   return (
