@@ -1,8 +1,6 @@
 import { useState } from "react";
-import useSWR from "swr";
 import "./App.css";
 import { Results } from "./components/results";
-
 export type Movie = {
   page: number;
   results: MovieResult[];
@@ -17,40 +15,39 @@ type MovieResult = {
   backdrop_path: string;
 };
 
-const fetcher = async (url: string): Promise<Movie> => {
-  const res = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${import.meta.env.VITE_API_KEY}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error("データ取得に失敗しました");
-  }
-
-  return res.json();
-};
-
 export default function App() {
   const [searchTitle, setSearchTitle] = useState("");
-  const [query, setQuery] = useState(""); // 実際に使うクエリ（検索ボタンで発火）
+  const [searchResult, setSearchResult] = useState<Movie | undefined>(
+    undefined
+  );
+  const [errorMessage, setErrorMassage] = useState("");
 
-  const shouldFetch = query.trim() !== "";
-  const url = shouldFetch
-    ? `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(
-        query
-      )}&language=ja`
-    : null;
+  async function fetchMovie(searchTitle: string) {
+    const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(
+      searchTitle
+    )}&language=ja`;
+    const options = {
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_API_KEY}`,
+      },
+    };
 
-  const { data, error } = useSWR<Movie>(url, fetcher);
+    try {
+      const response = await fetch(url, options);
+      const data = await response.json();
+      setSearchResult(data);
+      if (data.total_results === 0) {
+        setErrorMassage("検索結果がありません");
+      }
+    } catch (error) {
+      console.error("リクエストに失敗しました:", error);
+    }
 
-  let errorMessage = "";
-  if (!shouldFetch) {
-    errorMessage = "";
-  } else if (error) {
-    errorMessage = "データの取得に失敗しました";
-  } else if (data && data.total_results === 0) {
-    errorMessage = "検索結果がありません";
+    if (!searchTitle.trim()) {
+      alert("検索ワードを入力してください");
+      setErrorMassage("検索ワードを入力してください");
+      return;
+    }
   }
 
   return (
@@ -60,22 +57,14 @@ export default function App() {
         <input
           type="text"
           value={searchTitle}
-          onChange={(e) => setSearchTitle(e.target.value)}
-        />
-        <button
-          onClick={() => {
-            if (!searchTitle.trim()) {
-              alert("検索ワードを入力してください");
-              return;
-            }
-            setQuery(searchTitle);
+          onChange={(e) => {
+            setSearchTitle(e.target.value);
           }}
-        >
-          検索
-        </button>
+        />
+        <button onClick={() => fetchMovie(searchTitle)}>検索</button>
       </div>
 
-      <Results searchResult={data} errorMessage={errorMessage} />
+      <Results searchResult={searchResult} errorMessage={errorMessage} />
     </>
   );
 }
